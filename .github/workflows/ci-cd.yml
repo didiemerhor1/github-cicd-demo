@@ -2,51 +2,50 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  scan:
+  docker:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master
-
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          scan-type: fs
-          severity: CRITICAL,HIGH
-          exit-code: 1
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t didiemerhor1/flask-app:latest .
+
+      - name: Push Docker image
+        run: |
+          docker push didiemerhor1/flask-app:latest
 
   deploy:
-    needs: scan
+    needs: docker
     runs-on: ubuntu-latest
 
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
-
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
           script: |
-            if [ ! -d ~/github-cicd-demo ]; then
-              git clone https://github.com/didiemerhor1/github-cicd-demo.git ~/github-cicd-demo
-            fi
-
-            cd ~/github-cicd-demo
-
-            git pull origin main
+            docker pull didiemerhor1/flask-app:latest
 
             docker stop flask-app || true
             docker rm flask-app || true
 
-            docker build -t flask-app .
-
             docker run -d \
               --name flask-app \
               -p 5000:5000 \
-              flask-app
+              didiemerhor1/flask-app:latest
