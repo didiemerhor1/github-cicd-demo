@@ -2,3 +2,9 @@ venv/
 __pycache__/
 *.pyc
 .env
+
+# Environment secrets
+.env
+.env.local
+.env.production
+.env.*.local
