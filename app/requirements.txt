@@ -1,2 +1,8 @@
 flask==3.0.0
 gunicorn
+flask-sqlalchemy
+psycopg2-binary
+redis
+flask-limiter
+stripe
+sendgrid
